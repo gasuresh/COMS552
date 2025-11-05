@@ -155,7 +155,7 @@ does not.
         - P4, P5, P6 are all in the READY state
         - They voted COMMIT but the coordinator never received this info
         - So P4, P5, P6 cannot reach C to receive the GLOBAL_ABORT
-        - They must wait indefinitely or timeout for C to become reachable
+        - They must wait indefinitely or timeout
         - Even if they do timeout, they can't reach C to determine what decision was made
     - So P4, P5, P6 are blocked indefinitely
 - 3-phase commit scenario: Blocking doesn't occur
@@ -223,7 +223,7 @@ saying they are similar) and how the majority function is used to make decision.
             - To L1, L2, L3, L4, L6 : "Attack"
         - L6's case (loyal) (sends "Attack" to all)
             - To L1, L2, L3, L4, L5 : "Attack"
-    - Each lieutenant acts as commander for OM(0) within each OM(1)
+    - In each OM(1) round, the lieutentant relays the value it got from the commander to all other lieutenants (OM(0))
         - Consider L1's OM(1) execution
             - L2 received "Retreat" from L1, so L2 to relays this to L3, L4, L5, L6
             - L3 received "Attack" from L1, so L3 to relays this to L2, L4, L5, L6
