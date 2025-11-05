@@ -178,7 +178,7 @@ does not.
         - P4, P5, P6 contact each other, forming a majority since these are all of the reachable processes
         - They are all in the READY state
         - Since P1, P2, P3 form a majority, and none of them are in PRECOMMIT, we abort
-    - So we see that in our case, there is not blocking with 3-phase
+    - So we see that in our case, there is no blocking with 3-phase
 
 ## Problem 4 Agreement in Byzantine faulty system [30pts]
 
@@ -191,4 +191,67 @@ Describe how the agreement algorithm (with oral messages) is run among the
 generals by specifying what messages (i.e., “Attack” or “Retreat”) are sent in each
 step of the algorithm (when some steps are similar, you can avoid repetition by just
 saying they are similar) and how the majority function is used to make decision.
+
+- Setup
+    - N = 7, m = 2
+    - Loyal: Commander, L3, L4, L5, L6
+    - Commander's order: "Attack"
+    - We run the OM(2) algo
+- Algo
+    - OM(2): Commander sends message to all lieutenants
+        - The loyal commander sends "Attack" to all 6 lieutenants
+        - L1,L2,...L6 all receive "Attack"
+    - Each lieutenant acts as a commander for OM(1)
+        - Now each lieutenant relays what they received to the other 5 using OM(1)
+        - L1's case (traitor) (arbitrarily sends different messages)
+            - To L2: "Retreat"
+            - To L3: "Attack"
+            - To L4: "Retreat"
+            - To L5: "Attack"
+            - To L6: "Retreat"
+        - L2's case (traitor) (arbitrarily sends different messages)
+            - To L1: "Attack"
+            - To L3: "Retreat"
+            - To L4: "Attack"
+            - To L5: "Retreat"
+            - To L6: "Attack"
+        - L3's case (loyal) (sends "Attack" to all)
+            - To L1, L2, L4, L5, L6 : "Attack"
+        - L4's case (loyal) (sends "Attack" to all)
+            - To L1, L2, L3, L5, L6 : "Attack"
+        - L5's case (loyal) (sends "Attack" to all)
+            - To L1, L2, L3, L4, L6 : "Attack"
+        - L6's case (loyal) (sends "Attack" to all)
+            - To L1, L2, L3, L4, L5 : "Attack"
+    - Each lieutenant acts as commander for OM(0) within each OM(1)
+        - Consider L1's OM(1) execution
+            - L2 received "Retreat" from L1, so L2 to relays this to L3, L4, L5, L6
+            - L3 received "Attack" from L1, so L3 to relays this to L2, L4, L5, L6
+            - This pattern continues
+        - This pattern holds for L2's OM(1), L3's OM(1), etc.
+    - Deciding using Majority Function
+        - Consider what L3 receives from lieutenant/commander
+            - From Commander: "Attack"
+            - From L1: Received "Attack" from L1 and also collected relayed commands from OM(0) -> ("Attack", "Retreat", ...)
+                - Majority vote could be "Attack" or "Retreat"
+            - From L2: Received "Attack" from L2 and also collected relayed commands from OM(0) -> ("Attack", "Retreat", ...)
+                - Majority vote could be "Attack" or "Retreat"
+            - From L3: Received "Attack" from itself
+            - L4: Received "Attack" consistently since it is loyal
+                - Majority vote is "Attack"
+            - L5: Received "Attack" consistently since it is loyal
+                - Majority vote is "Attack"
+            - L6: Received "Attack" consistently since it is loyal
+                - Majority vote is "Attack"
+            - So L3's final majority vote is: ("Attack", "Attack" or "Retreat", "Attack" or "Retreat", "Attack", "Attack", "Attack", "Attack")
+        - The logic for L3 applies to all of the other loyal lieutenants as well
+            - So there are at least 5 "Attack" votes, and 2 conflicting votes
+            - The final majority decision is "Attack" as needed
+    - IC conditions
+        - IC1: All loyal lieutenants decided on "Attack" so this holds
+        - IC2: The commander is loyal and sent "Attack", and all loyal lieutenants followed this orders
+    - Therefore we have reached an agreement in the system even with the traitors
+
+
+
 
