@@ -33,6 +33,7 @@ and M4 denote the second message sent from P3 to P1 and P2 respectively.)
             - $VT_1[1] \geq VT_{M1}[1] \Rightarrow 0 \geq 0$ so this holds
             - $VT_1[2] \geq VT_{M1}[2] \Rightarrow 0 \geq 0$ so this holds
         - Since both conditions hold, M1 is delivered immediately
+        - Delivery timestamp: [0,0,1]
         - After delivery: $VT_1[k] = max\{VT_1[k], VT_{M1}[k]\}$ for all k
             - So $VT_1 = [max(0, 0), max(0, 0), max(0,1)] = [0, 0, 1]$
     - Since M1 was delivered we check buffered M3 at P1
@@ -41,6 +42,7 @@ and M4 denote the second message sent from P3 to P1 and P2 respectively.)
             - $VT_1[1] \geq VT_{M3}[1] \Rightarrow 0 \geq 0$ so this holds
             - $VT_1[2] \geq VT_{M3}[2] \Rightarrow 0 \geq 0$ so this holds 
         - Since both conditions hold, M3 is delivered now
+        - Delivery timestamp: [0,0,2]
         - After delivery: $VT_1[k] = max\{VT_1[k], VT_{M3}[k]\}$ for all k
             - So $VT_1 = [max(0, 0), max(0, 0), max(2, 1)] = [0, 0, 2]$
     - M4 arrives at P2:
@@ -53,6 +55,7 @@ and M4 denote the second message sent from P3 to P1 and P2 respectively.)
             - $VT_2[1] \geq VT_{M2}[1] \Rightarrow 0 \geq 0$ so this holds
             - $VT_2[2] \geq VT_{M2}[2] \Rightarrow 0 \geq 0$ so this holds
         - Since both conditions hold, M2 is delivered immediately
+        - Delivery timestamp: [0,0,1]
         - After delivery: $VT_2[k] = max\{VT_2[k], VT_{M2}[k]\}$ for all k
             - So $VT_2 = [max(0, 0), max(0, 0), max(0,1)] = [0, 0, 1]$
     - Since M2 was delivered we check buffered M4 at P2
@@ -61,9 +64,10 @@ and M4 denote the second message sent from P3 to P1 and P2 respectively.)
             - $VT_2[1] \geq VT_{M4}[1] \Rightarrow 0 \geq 0$ so this holds
             - $VT_2[2] \geq VT_{M4}[2] \Rightarrow 0 \geq 0$ so this holds 
         - Since both conditions hold, M4 is delivered now
+        - Delivery timestamp: [0,0,2]
         - After delivery: $VT_2[k] = max\{VT_2[k], VT_{M4}[k]\}$ for all k
             - So $VT_2 = [max(0, 0), max(0, 0), max(1, 2)] = [0, 0, 2]$
-    - Therfore we have determined the causal ordering of messages using Birman-Schipter-Stephenson Protocol
+- Therfore we have determined the causal ordering of messages using Birman-Schipter-Stephenson Protocol
 
 
 ## Problem 2 Global State Recording [25pts]
@@ -96,7 +100,7 @@ recorded? Here we assume any two sites can communicate with each other.
     - S3 hasn't recorded its state yet
     - C(S1 -> S3) already contains 30
     - Based on FIFO, S3 receives this values first
-    - S1 records its local state to be LS1 = 130
+    - S3 records its local state to be LS3 = 130
     - Now we:
         - Record C(S1 -> S3) as empty
         - Send markers on all outgoing channels
@@ -130,6 +134,51 @@ Provide an example to show that, for some failure scenario where the coordinator
 cannot be reached by some sites, the 2-phase commit protocol blocks such sites
 until the coordinator becomes reachable again while the 3-phase commit protocol
 does not.
+
+- Consider the following failure scenario
+    - There is one coordinator C
+    - There are 6 participants P1, P2, P3, P4, P5, P6
+    - P1, P2, P3 can reach C but P4, P5, P6 cannot reach C
+- 2-phase commit scenario: Blocking occurs
+    - Voting
+        - Coordinator sends VOTE_REQUEST to all 6 participants
+        - All participants P1, P2, P3, P4, P5, P6 receive the request and VOTE_COMMIT
+        - P1, P2, P3 sends their votes back to C
+        - Failure scenario occurs
+        - P4, P5, P6 vote VOTE_COMMIT but can't send their votes to C since it is unreachable
+    - Decision
+        - C receives votes from P1, P2, P3
+        - C is waiting for votes from P4, P5, P6 but these processes can't reach C
+        - So C times out and sends GLOBAL_ABORT to P1, P2, P3, the processes that are reachable
+        - P1, P2, P3 receive the GLOBAL_ABORT and aborts
+    - Issue
+        - P4, P5, P6 are all in the READY state
+        - They voted COMMIT but the coordinator never received this info
+        - So P4, P5, P6 cannot reach C to receive the GLOBAL_ABORT
+        - They must wait indefinitely or timeout for C to become reachable
+        - Even if they do timeout, they can't reach C to determine what decision was made
+    - So P4, P5, P6 are blocked indefinitely
+- 3-phase commit scenario: Blocking doesn't occur
+    - Voting
+        - Similar scenario as 2-phase
+        - Coordinator sends VOTE_REQUEST to all 6 participants
+        - All participants P1, P2, P3, P4, P5, P6 receive the request and VOTE_COMMIT
+        - P1, P2, P3 sends their votes back to C
+        - Failure scenario occurs
+        - P4, P5, P6 vote VOTE_COMMIT but can't send their votes to C since it is unreachable
+    - Prepare to commit
+        - C receives votes from P1, P2, P3
+        - C sends PREPARE_COMMIT to P1, P2, P3
+        - P1, P2, P3 enter the PRECOMMIT state
+        - P4, P5, P6 can't receive PREPARE_COMMIT from C
+    - Decision
+        - C sends GLOBAL_COMMIT to P1, P2, P3 and they commit
+        - P4, P5, P6 timeout waiting for PREPARE_COMMIT
+        - P4, P5, P6 are still in the READY state and run the majority rule to make a decision
+        - P4, P5, P6 contact each other, forming a majority since these are all of the reachable processes
+        - They are all in the READY state
+        - Since P1, P2, P3 form a majority, and none of them are in PRECOMMIT, we abort
+    - So we see that in our case, there is not blocking with 3-phase
 
 ## Problem 4 Agreement in Byzantine faulty system [30pts]
 
